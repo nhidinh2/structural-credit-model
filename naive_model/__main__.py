@@ -6,6 +6,7 @@ Run with: python -m basemodel
 
 import sys
 import pandas as pd
+import numpy as np
 from pathlib import Path
 
 # Add parent directory to path
@@ -35,24 +36,16 @@ def main():
     # equity_vol = pd.read_csv('data/real/equity_vol.csv', parse_dates=['date'])
     # debt = pd.read_csv('data/real/debt_quarterly.csv', parse_dates=['date'])
     # risk_free = pd.read_csv('data/real/risk_free.csv', parse_dates=['date'])
+       # Load data - start with synthetic for testing
+    data_dir = Path(__file__).parent.parent / 'data' / 'synthetic'
     
-    # TODO: For each firm and date:
-    # 1. Get equity value (E), equity volatility (sigma_E), debt (D), risk-free rate (r)
-    # 2. Set time to maturity (T, e.g., 1.0 year)
-    # 3. Calibrate: V, sigma_V = calibrate_asset_parameters(E, sigma_E, D, T, r)
-    # 4. Compute: DD, PD = compute_risk_measures(V, D, T, r, sigma_V)
-    # 5. Store results
+    print(f"\nLoading data from {data_dir}...")
+    equity_prices = pd.read_csv(data_dir / 'equity_prices.csv', parse_dates=['date'])
+    equity_vol = pd.read_csv(data_dir / 'equity_vol.csv', parse_dates=['date'])
+    debt = pd.read_csv(data_dir / 'debt_quarterly.csv', parse_dates=['date'])
+    risk_free = pd.read_csv(data_dir / 'risk_free.csv', parse_dates=['date'])
     
-    # TODO: Output results
-    # Example:
-    # results_df = pd.DataFrame(results)
-    # results_df.to_csv('outputs/baseline_results.csv', index=False)
-    # print("\nResults saved to outputs/baseline_results.csv")
-    
-    print("\nTODO: Implement the main function")
-    print("See naive_model/model.py, naive_model/calibration.py, naive_model/risk_measures.py")
-
-
+    print(f"  Eq
 if __name__ == "__main__":
     main()
 
