@@ -178,3 +178,4 @@ class MertonModel:
         sigma_E = (delta * sigma_V * V) / E if E > 0 else 0.0
         return sigma_E
 
+

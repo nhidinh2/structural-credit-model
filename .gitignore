@@ -28,6 +28,7 @@ ENV/
 
 # IDE
 .vscode/
+.cursor/
 .idea/
 *.swp
 *.swo
@@ -49,4 +50,3 @@ outputs/*
 # OS
 .DS_Store
 Thumbs.db
-

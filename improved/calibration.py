@@ -9,10 +9,10 @@ import numpy as np
 from scipy.optimize import fsolve
 from scipy.stats import norm
 
-from naive_model.model import black_scholes_call, black_scholes_vega, black_scholes_delta
+from improved.model import black_scholes_call, black_scholes_vega, black_scholes_delta
 
 
-def calibrate_asset_parameters(E, sigma_E, D, T, r, V0=None, sigma_V0=None):
+def calibrate_asset_parameters(E, sigma_E_smooth, D, T, r, V0=None, sigma_V0=None):
     """
     Calibrate asset value (V) and asset volatility (sigma_V) from equity data.
     
@@ -24,7 +24,7 @@ def calibrate_asset_parameters(E, sigma_E, D, T, r, V0=None, sigma_V0=None):
     -----------
     E : float
         Market value of equity
-    sigma_E : float
+    sigma_E_smooth : float
         Equity volatility (annualized)
     D : float
         Face value of debt
@@ -35,7 +35,7 @@ def calibrate_asset_parameters(E, sigma_E, D, T, r, V0=None, sigma_V0=None):
     V0 : float, optional
         Initial guess for asset value (default: E + D)
     sigma_V0 : float, optional
-        Initial guess for asset volatility (default: sigma_E * E / (E + D))
+        Initial guess for asset volatility (default: sigma_E_smooth * E / (E + D))
     
     Returns:
     --------
@@ -46,7 +46,7 @@ def calibrate_asset_parameters(E, sigma_E, D, T, r, V0=None, sigma_V0=None):
     if V0 is None:
         V0 = E + D # Simple initial guess
     if sigma_V0 is None:
-        sigma_V0 = sigma_E * E / (E + D) if (E + D) > 0 else sigma_E
+        sigma_V0 = sigma_E_smooth * E / (E + D) if (E + D) > 0 else sigma_E_smooth
     
     V0 = max(float(V0), 1e-6)
     sigma_V0 = max(float(sigma_V0), 1e-6)
@@ -67,7 +67,7 @@ def calibrate_asset_parameters(E, sigma_E, D, T, r, V0=None, sigma_V0=None):
     
         delta = black_scholes_delta(V, D, T, r, sigma_V)
         E_vol_calc = (delta * sigma_V * V) / E if E > 0 else 0
-        eq2 = E_vol_calc - sigma_E
+        eq2 = E_vol_calc - sigma_E_smooth
         
         return [eq1, eq2]
 
@@ -80,8 +80,9 @@ def calibrate_asset_parameters(E, sigma_E, D, T, r, V0=None, sigma_V0=None):
     except Exception as e:
         # On failure, use standard approximation
         V = E + D
-        sigma_V = sigma_E * E / (E + D) if (E + D) > 0 else sigma_E
+        sigma_V = sigma_E_smooth * E / (E + D) if (E + D) > 0 else sigma_E_smooth
         V = max(V, 1e-6)
         sigma_V = max(sigma_V, 1e-6)
         return V, sigma_V
+
 

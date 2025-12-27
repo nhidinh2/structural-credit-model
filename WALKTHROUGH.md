@@ -30,7 +30,9 @@ Review the Mathematical Background section in README.md:
 
 $$E = \text{BlackScholes}(V, D, T, r, \sigma_V)$$
 
-$$\sigma_E \cdot E = \frac{\partial E}{\partial V} \cdot \sigma_V \cdot V = \text{vega}(V, D, T, r, \sigma_V) \cdot \sigma_V \cdot V$$
+$$\sigma_E \cdot E = \frac{\partial E}{\partial V} \cdot \sigma_V \cdot V$$
+
+where $\frac{\partial E}{\partial V} = \Phi(d_1)$ is the option delta.
 
 Use `scipy.optimize.fsolve` to solve this system.
 
@@ -40,9 +42,9 @@ Use `scipy.optimize.fsolve` to solve this system.
 
 Start with `naive_model/model.py`:
 - Implement `black_scholes_call()` - use the formula from Mathematical Background
-- Implement `black_scholes_vega()` - derivative w.r.t. volatility
+- Implement `black_scholes_delta()` - derivative w.r.t. underlying price (needed for calibration)
 - Implement `MertonModel.equity_value()` - calls Black-Scholes
-- Implement `MertonModel.equity_volatility()` - uses vega relationship
+- Implement `MertonModel.equity_volatility()` - uses delta relationship (∂E/∂V = Φ(d₁))
 
 ### 3.2 Implement Calibration
 
@@ -115,21 +117,6 @@ In `naive_model/__main__.py`, you need to:
    results_df = pd.DataFrame(results)
    results_df.to_csv('outputs/naive_results.csv', index=False)
    ```
-
-### 3.5 Validate Your Implementation
-
-**After completing your implementation**, validate it:
-
-```bash
-python evaluation/validate_implementation.py
-```
-
-This script will:
-- Test your calibration on multiple test cases
-- Compare your results with the reference implementation
-- Report if your implementation is correct
-
-**Note**: The reference implementation (`baseline/merton_reference.py`) is provided for validation only. Do not copy code from it - implement everything yourself based on the mathematical formulas in the README.
 
 ## Step 4: Diagnose Baseline Weaknesses
 

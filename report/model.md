@@ -1,4 +1,5 @@
 ## `model.py`
+
 ### `black_scholes_call(S, K, T, r, sigma)`
 
 - **What it does**: Computes the **Black–Scholes price** of a European call option.
@@ -41,7 +42,7 @@
   - If $T \le 0$, $\sigma \le 0$, or $S \le 0$, returns 0.0 (no meaningful volatility exposure).
   - Otherwise:
     - $d_1$ as above.
-    - $\nu$ $= S \phi(d_1) \sqrt{T}$
+    - $\nu = S \phi(d_1) \sqrt{T}$
 - **Inputs**: Same as `black_scholes_call`.
 - **Output**:
   - `v`: Vega of the call.
@@ -125,7 +126,7 @@ Represents the **baseline Merton structural credit model**, where equity is mode
      - If calibration fails (exception), returns initial guesses as fallback
 - **Inputs**:
   - `E`: Equity value.
-  - `sigma_E`: Equity volatility.
+  - `sigma_E`: Equity volatility (raw for naive model, smoothed for improved model).
   - `D`: Debt face value.
   - `T`: Time to maturity in years.
   - `r`: Risk-free rate.
@@ -133,6 +134,8 @@ Represents the **baseline Merton structural credit model**, where equity is mode
   - `sigma_V0`: Initial guess for asset volatility.
 - **Output**:
   - `(V, sigma_V)`: Estimated asset value and asset volatility.
+
+**Note**: In the improved model, this function is called with `sigma_E_smooth` (smoothed equity volatility) instead of raw `sigma_E`.
 
 ---
 
@@ -159,7 +162,6 @@ Represents the **baseline Merton structural credit model**, where equity is mode
   - `sigma_V`: Asset volatility.
 - **Output**:
   - Distance-to-default
-
 
 ---
 
@@ -201,36 +203,48 @@ Represents the **baseline Merton structural credit model**, where equity is mode
 
 ---
 
-## `__main__.py`
+## `__main__.py` (Baseline Model)
 
 ### `main()`
 
 - **What it does**: Main entry point that orchestrates the entire baseline Merton model pipeline: loads data, aligns it, calibrates parameters for each firm/date, computes risk measures, and saves results.
 - **How it works**:
   1. **Data Loading**:
-     - Loads four CSV files from `data/synthetic/` (or can be changed to `data/real/`):
-       - `equity_prices.csv`: Daily equity prices per firm
-       - `equity_vol.csv`: Daily equity volatility per firm
-       - `debt_quarterly.csv`: Quarterly debt values per firm
-       - `risk_free.csv`: Daily risk-free rates
-     - Prints data shapes for verification
+     - Loads four CSV files from `data/real/`:
+       - `equity_prices.csv`: Daily equity prices per firm (per-share, in dollars)
+       - `equity_vol.csv`: Daily equity volatility per firm (annualized)
+       - `debt_quarterly.csv`: Quarterly debt values per firm (in millions)
+       - `risk_free.csv`: Daily risk-free rates (annualized)
+  
   2. **Data Alignment**:
-    
-  3. **Model Initialization**:
-   
-  4. **Calibration Loop**:
-    
-  5. **Output**:
+     - **Debt alignment**: For each firm, aligns quarterly debt data to daily equity dates:
+       - Creates a combined date index from both equity and debt dates
+       - Uses backward-fill then forward-fill to interpolate quarterly debt to daily frequency
+       - Filters to only equity trading dates
+     - **Equity conversion**: Converts per-share equity prices to total market capitalization:
+       - Uses firm-specific shares outstanding (in billions)
+       - Formula: $E_{\text{total}} = E_{\text{per-share}} \times \text{shares} \times 1000$ (converts to millions)
+     - **Risk-free rate**: Uses daily risk-free rates, aligned by date
+  
+  3. **Calibration Loop**:
+     - For each firm and each date:
+       - Extracts equity value (E), equity volatility (σ_E), debt (D), and risk-free rate (r)
+       - Uses warm-start initialization: if previous period's solution exists, uses it as initial guess; otherwise uses standard approximation ($V_0 = E + D$, $\sigma_{V0} = \sigma_E \cdot E / (E + D)$)
+       - Calls `calibrate_asset_parameters()` to solve for asset value (V) and asset volatility (σ_V)
+       - Computes risk measures (DD, PD) using `compute_risk_measures()`
+       - Stores results with date, firm_id, V, sigma_V, DD, PD
+  
+  4. **Output**:
      - Converts results list to pandas DataFrame
      - Creates `outputs/` directory if it doesn't exist
      - Saves results to `outputs/naive_results.csv` with columns:
        - `date`: Evaluation date
        - `firm_id`: Firm identifier
-       - `V`: Estimated asset value
-       - `sigma_V`: Estimated asset volatility
+       - `V`: Estimated asset value (in millions)
+       - `sigma_V`: Estimated asset volatility (annualized)
        - `DD`: Distance-to-default
        - `PD`: Default probability
-     - Prints summary statistics (mean, std, min, max, etc.) for the numeric columns
+     - Prints summary statistics and total observation count
 - **Inputs**: None (reads from data files)
 - **Output**: 
   - CSV file: `outputs/naive_results.csv`
@@ -238,6 +252,84 @@ Represents the **baseline Merton structural credit model**, where equity is mode
 
 ---
 
+## `smoothing.py` (Improved Model Only)
+
+### `smooth_equity_volatility(equity_vol_df, lambda_ewma=0.94)`
+
+- **What it does**: Smooths noisy realized equity volatility using **Exponentially Weighted Moving Average (EWMA)** on variance, then takes the square root to get smoothed volatility.
+- **Rationale**: Raw realized volatility can be very noisy, leading to unstable calibration results. Smoothing reduces noise while preserving the underlying volatility dynamics.
+- **How it works**:
+  1. For each firm separately:
+     - Sorts volatility data by date
+     - Applies EWMA smoothing on **variance** (not volatility directly):
+       - Initializes with first variance: $\text{var}_{\text{smooth},0} = \sigma_0^2$
+       - For each subsequent period: $\text{var}_{\text{smooth},t} = \lambda \cdot \text{var}_{\text{smooth},t-1} + (1-\lambda) \cdot \sigma_t^2$
+       - Converts back to volatility: $\sigma_{\text{smooth},t} = \sqrt{\text{var}_{\text{smooth},t}}$
+  2. Returns DataFrame with both raw and smoothed volatility columns
+- **Parameters**:
+  - `equity_vol_df`: DataFrame with columns `date`, `firm_id`, `equity_vol`
+  - `lambda_ewma`: EWMA smoothing parameter (default: 0.94, typical for volatility smoothing)
+- **Output**:
+  - DataFrame with columns: `date`, `firm_id`, `equity_vol_raw`, `equity_vol_smooth`, `equity_vol` (where `equity_vol` is set to smoothed values for pipeline use)
+
+---
+
+### `plot_smoothed_volatility(equity_vol_df, output_path=None)`
+
+- **What it does**: Creates visualization comparing raw vs smoothed equity volatility for each firm.
+- **How it works**:
+  - Creates subplots (one per firm)
+  - Plots raw volatility as light blue line (alpha=0.6)
+  - Plots smoothed volatility as dark blue line (linewidth=2)
+  - Adds labels, title, legend, and grid
+- **Parameters**:
+  - `equity_vol_df`: DataFrame with `equity_vol_raw` and `equity_vol_smooth` columns
+  - `output_path`: Optional path to save the plot (default: displays interactively)
+- **Output**:
+  - Saves plot to `outputs/smoothed_volatility.png` if path provided, otherwise displays
+
+---
+
+## `__main__.py` (Improved Model)
+
+### `main()`
+
+- **What it does**: Main entry point for the improved model, which adds volatility smoothing before calibration.
+- **How it works**:
+  1. **Data Loading**: Same as baseline model
+  
+  2. **Volatility Smoothing** (NEW):
+     - Calls `smooth_equity_volatility()` to apply EWMA smoothing to equity volatility
+     - Generates visualization plot saved to `outputs/smoothed_volatility.png`
+     - Uses smoothed volatility (`equity_vol_smooth`) for all subsequent calibration steps
+  
+  3. **Data Alignment**: Same as baseline model
+  
+  4. **Calibration Loop**: Same as baseline model, but uses smoothed equity volatility (`sigma_E_smooth`) instead of raw volatility
+  
+  5. **Output**:
+     - Saves results to `outputs/improved_results.csv` (same format as baseline)
+     - Also saves volatility smoothing plot to `outputs/smoothed_volatility.png`
+- **Key Difference from Baseline**: The improved model smooths equity volatility before calibration, which reduces noise and improves stability of asset value and volatility estimates.
+
+---
+
+## Model Comparison
+
+### Baseline (Naive) Model
+- Uses **raw equity volatility** directly from data
+- Simpler pipeline, no preprocessing
+- May suffer from noise-induced instability in calibration
+
+### Improved Model
+- **Pre-processes equity volatility** using EWMA smoothing
+- Reduces noise in volatility input, leading to more stable calibration
+- Same core Merton model structure, only the input volatility is smoothed
+- Minimal change: only adds one preprocessing step
+
+---
+
 ## References
 
 - **Merton model and calibration write-up**: [Merton Model Credit Risk Calculator](https://www.creditrisk.nathangs.ca/)
+- **EWMA Volatility Smoothing**: Common practice in financial modeling to reduce noise in realized volatility estimates
