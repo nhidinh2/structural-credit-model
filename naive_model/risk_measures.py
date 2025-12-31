@@ -33,17 +33,10 @@ def distance_to_default(V, D, T, r, sigma_V):
     float
         Distance-to-default
     """
-    # I think DD = d2 though
     if T <= 0:
-        return float('inf') if V > D else float('-inf')
+        return float('nan')
     
-    E_VT = V * np.exp(r * T)
-    std_VT = V * np.exp(r * T) * np.sqrt(np.exp(sigma_V**2 * T) - 1)
-    
-    if std_VT <= 0:
-        return float('inf') if E_VT > D else float('-inf')
-    
-    DD = (E_VT - D) / std_VT
+    DD = (np.log(V / D) + (r - 0.5 * sigma_V**2) * T) / (sigma_V * np.sqrt(T))
     return DD
 
 
@@ -71,13 +64,11 @@ def default_probability(V, D, T, r, sigma_V):
     float
         Default probability (between 0 and 1)
     """
-    
-    if T <= 0 or sigma_V <= 0 or V <= 0 or D <= 0:
-        return 1.0 if V < D else 0.0
+    if T <= 0:
+        return float('nan')
     
     d2 = (np.log(V / D) + (r - 0.5 * sigma_V**2) * T) / (sigma_V * np.sqrt(T))
     PD = norm.cdf(-d2)
-    
     return max(0.0, min(1.0, PD)) 
 
 def compute_risk_measures(V, D, T, r, sigma_V):

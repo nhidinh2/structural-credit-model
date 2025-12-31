@@ -10,37 +10,49 @@ After implementing and evaluating the baseline model, we identify systematic wea
 
 ### 2.1 Baseline Merton Model
 
-The baseline Merton model is based on the following key assumptions:
+#### Key Assumptions
 
-1. **Asset Value Process**: Firm asset value $V_t$ follows a geometric Brownian motion under the risk-neutral measure:
-   $$dV_t = r V_t dt + \sigma_V V_t dW_t$$
-   where $r$ is the risk-free rate (assumed constant), $\sigma_V$ is asset volatility (assumed constant), and $dW_t$ is a Wiener process.
+1. **Capital structure simplification**: The firm is represented by a single zero-coupon debt claim with face value $D$ maturing at horizon $T$.
 
-2. **Default Condition**: Default occurs only at maturity $T$ if the asset value falls below the debt face value $D$:
-   - Default if: $V_T < D$
-   - No default if: $V_T \geq D$
+2. **Equity as a call option**: Equity holders receive $\max(V_T - D, 0)$, so equity is modeled as a European call option on firm assets with strike $D$.
 
-3. **Equity as European Call Option**: Equity is valued as a European call option on firm assets with strike price equal to the debt face value:
-   $$E_t = V_t \Phi(d_1) - D e^{-r(T-t)} \Phi(d_2)$$
-   where:
-   - $d_1 = \frac{\ln(V_t/D) + (r + \sigma_V^2/2)(T-t)}{\sigma_V \sqrt{T-t}}$
-   - $d_2 = d_1 - \sigma_V \sqrt{T-t}$
-   - $\Phi(\cdot)$ is the standard normal cumulative distribution function
+3. **Asset dynamics**: Firm asset value follows a geometric Brownian motion with constant volatility over $[0, T]$:
+   $$dV_t = \mu V_t \, dt + \sigma_V V_t \, dW_t$$
+   where $\mu$ is the drift rate, $\sigma_V$ is asset volatility, and $dW_t$ is a Wiener process.
 
-4. **Equity Volatility Relationship**: The relationship between equity volatility $\sigma_E$ and asset volatility $\sigma_V$ is given by:
-   $$\sigma_E E_t = \Delta \sigma_V V_t$$
-   where $\Delta = \Phi(d_1)$ is the option delta (sensitivity of equity value to asset value).
+4. **Frictionless markets**: No taxes, transaction costs, or funding frictions; continuous trading; borrowing/lending at the risk-free rate.
+
+5. **Default only at maturity**: Default occurs only at $T$ if $V_T < D$ (no early default / liquidity default).
+
+6. **(Often implicit in baseline)** Dividends are ignored, and parameters like $\sigma_V$ are treated as constant over the horizon $T$.
+
+#### Mathematical Formulation
+
+Under risk-neutral valuation, equity is priced by Black–Scholes as:
+$$E = V \Phi(d_1) - D e^{-r T} \Phi(d_2),$$
+where
+$$d_1 = \frac{\ln(V/D) + (r + \frac{1}{2}\sigma_V^2)T}{\sigma_V \sqrt{T}}, \quad d_2 = d_1 - \sigma_V \sqrt{T}.$$
+
+A second relationship comes from equity volatility (Itô + option delta):
+$$\sigma_E E = \Phi(d_1) \sigma_V V \quad \Longleftrightarrow \quad \sigma_E = \frac{\Phi(d_1) \sigma_V V}{E}.$$
+
+Once $(V, \sigma_V)$ are determined, baseline credit risk metrics are:
+
+**Distance to default**:
+$$\text{DD} = \frac{\ln(V/D) + (r - \frac{1}{2}\sigma_V^2)T}{\sigma_V \sqrt{T}}.$$
+
+**Default probability**:
+$$\text{PD} = P(V_T < D) = \Phi(-\text{DD}) = \Phi(-d_2) \quad \text{(under the model)}.$$
 
 #### Calibration Approach
 
-The unobservable parameters $V_t$ and $\sigma_V$ must be calibrated from observable equity data. This requires solving a system of two equations:
+For each firm-date, the model treats observed equity market value $E$, equity volatility $\sigma_E$, debt face value $D$, risk-free rate $r$, and horizon $T$ as inputs, and solves for the latent asset value $V$ and asset volatility $\sigma_V$ using the two equations:
+$$\begin{cases}
+E - (V \Phi(d_1) - D e^{-r T} \Phi(d_2)) = 0, \\
+\sigma_E E - \Phi(d_1) \sigma_V V = 0.
+\end{cases}$$
 
-1. **Equity Value Equation**: $E_t = \text{BlackScholes}(V_t, D, T-t, r, \sigma_V)$
-2. **Equity Volatility Equation**: $\sigma_E E_t = \Delta \sigma_V V_t$
-
-This system is solved numerically using `scipy.optimize.fsolve` with initial guesses:
-- $V_0 = E + D$ (simple approximation)
-- $\sigma_{V0} = \frac{\sigma_E \cdot E}{E + D}$ (leverage-adjusted estimate)
+In the baseline implementation, $(V, \sigma_V)$ are obtained via unconstrained numerical root-finding (e.g., `fsolve`) independently each day (often warm-started from the previous solution). The calibrated $(V, \sigma_V)$ are then plugged into the formulas above to produce time series of $\text{DD}$ and $\text{PD}$.
 
 ### 2.2 Improved Model
 
@@ -96,13 +108,21 @@ This warm-start approach improves convergence by leveraging the temporal persist
 Once $V$ and $\sigma_V$ are calibrated, risk measures are computed:
 
 1. **Distance-to-Default (DD)**:
-   $$\text{DD} = \frac{E[V_T] - D}{\text{std}(V_T)}$$
-   where:
-   - $E[V_T] = V e^{rT}$ (expected asset value at maturity)
-   - $\text{std}(V_T) = V e^{rT} \sqrt{e^{\sigma_V^2 T} - 1}$ (standard deviation)
+   $$\text{DD} = \frac{\ln(V/D) + (r - \sigma_V^2/2)T}{\sigma_V \sqrt{T}}$$
+   This is the standardized distance in the log-normal distribution, equivalent to $d_2$ in the Black-Scholes framework.
+   
+   **Edge cases**:
+   - If $T \leq 0$: returns `nan` (invalid input)
+   - Inputs $V$, $D$, and $\sigma_V$ are validated upstream in the calibration and data loading pipeline, so no additional checks are performed here
 
 2. **Default Probability (PD)**:
    $$\text{PD} = \Phi(-d_2) = \Phi\left(-\frac{\ln(V/D) + (r - \sigma_V^2/2)T}{\sigma_V \sqrt{T}}\right)$$
+   where $d_2$ is the same as in the DD formula above.
+   
+   **Edge cases**:
+   - If $T \leq 0$: returns `nan` (invalid input)
+   - Inputs $V$, $D$, and $\sigma_V$ are validated upstream in the calibration and data loading pipeline, so no additional checks are performed here
+   - Result is clamped to $[0, 1]$ to ensure valid probability
 
 ## 4. Empirical Setup
 

@@ -30,7 +30,6 @@ def black_scholes_call(S, K, T, r, sigma):
     float
         Call option price
     """
-
     if T <= 0 or sigma <= 0 or S <= 0:
         return max(S - K * np.exp(-r * T), 0)
     
@@ -175,7 +174,6 @@ class MertonModel:
         
         delta = black_scholes_delta(V, D, self.T, r, sigma_V)
         
-        sigma_E = (delta * sigma_V * V) / E if E > 0 else 0.0
+        sigma_E = (delta * sigma_V * V) / E
         return sigma_E
-
 

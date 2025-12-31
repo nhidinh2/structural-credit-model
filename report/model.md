@@ -143,17 +143,15 @@ Represents the **baseline Merton structural credit model**, where equity is mode
 
 ### `distance_to_default(V, D, T, r, sigma_V)`
 
-- **What it does**: Calculates **Distance-to-Default (DD)**, a measure of how many standard deviations the expected asset value is above the default debt.
+- **What it does**: Calculates **Distance-to-Default (DD)**, a measure of how many standard deviations the asset value is above the default threshold.
 - **Interpretation**: Higher DD = lower default risk. DD measures the "safety margin" in units of asset volatility.
 - **How it works**:
-  - **Expected asset value at maturity**: $E[V_T] = V \cdot e^{rT}$
-  - **Standard deviation of asset value at maturity**: 
-    $\text{std}(V_T) = V \cdot e^{rT} \cdot \sqrt{e^{\sigma_V^2 T} - 1}$
-  - **Distance-to-Default**: 
-    $\text{DD} = \frac{E[V_T] - D}{\text{std}(V_T)}$
+  - Under the Merton model, the distance-to-default is computed as:
+    $\text{DD} = \frac{\ln(V/D) + (r - \sigma_V^2/2)T}{\sigma_V \sqrt{T}}$
+    where this is the standardized distance in the log-normal distribution.
   - **Edge cases**:
-    - If $T \leq 0$, returns `inf` if $V > D$ else `-inf`
-    - If `std_VT <= 0`, returns `inf` if expected value > debt else `-inf`
+    - If $T \leq 0$: returns `nan` (invalid input)
+    - Inputs $V$, $D$, and $\sigma_V$ are validated upstream (calibration ensures $V \geq 10^{-6}$ and $\sigma_V \geq 10^{-6}$, and data loading validates $D > 0$), so no additional validation is performed here
 - **Inputs**:
   - `V`: Current asset value.
   - `D`: Debt face value.
@@ -176,8 +174,8 @@ Represents the **baseline Merton structural credit model**, where equity is mode
     where:
     $d_2 = \frac{\ln(V/D) + (r - \sigma_V^2/2)T}{\sigma_V \sqrt{T}}$
   - **Edge cases**:
-    - If $T \leq 0$, $\sigma_V \leq 0$, $V \leq 0$, or $D \leq 0$:
-      - Returns `1.0` if $V < D$ (already in default), else `0.0`
+    - If $T \leq 0$: returns `nan` (invalid input)
+    - Inputs $V$, $D$, and $\sigma_V$ are validated upstream (calibration ensures $V \geq 10^{-6}$ and $\sigma_V \geq 10^{-6}$, and data loading validates $D > 0$), so no additional validation is performed here
     - Clamps result to $[0, 1]$ to ensure valid probability
 - **Inputs**:
   - `V`: Asset value.
