@@ -58,6 +58,7 @@ In the baseline implementation, $(V, \sigma_V)$ are obtained via unconstrained n
 
 The improved model applies EWMA (Exponential Weighted Moving Average) smoothing to $\sigma_E$:
    - **EWMA Smoothing**: Apply exponential weighted moving average to the variance, then take the square root:
+   
    $$\text{var}_t^{\text{smooth}} = \lambda \cdot \text{var}_{t-1}^{\text{smooth}} + (1-\lambda) \cdot \sigma_{E,t}^2$$
 
    $$\sigma_{E,t}^{\text{smooth}} = \sqrt{\text{var}_t^{\text{smooth}}}$$
@@ -174,7 +175,7 @@ The estimated default probabilities exhibit large, discontinuous jumps over time
 - TSLA: $9.94$
 - XOM: $31.55$
 
-![Figure 5.1: log(PD) time-series](outputs/diagnosis_timeseries.png)
+![Figure 5.1: log(PD) time-series](../outputs/diagnosis_timeseries.png)
 
 #### (2) Asset-value plausibility
 
@@ -182,7 +183,7 @@ The inferred asset values themselves are not the primary source of failure. We d
 
 **Evidence.** Figure 5.2 shows histograms of the asset-to-equity ratio ($V/E$). For AAPL, TSLA, XOM, and JPM, $V/E$ remains within plausible ranges (typically below 3), consistent with the Merton framework where $V \approx E + D$. Ford (F) exhibits higher $V/E$ ratios, but the calibration also yields very small asset volatility. This pattern is indicative of degeneracy. 
 
-![Figure 5.2: V/E histograms](outputs/diagnosis_v_e_ratio.png)
+![Figure 5.2: V/E histograms](../outputs/diagnosis_v_e_ratio.png)
 
 
 #### (3) Risk ranking consistency
@@ -194,7 +195,7 @@ The model's ability to rank firms by distress is imperfect and occasionally unre
 - 17.1% of days exhibit the wrong sign between PD and leverage.
 - PD ranks change abruptly even when leverage ranks remain constant.
 
-![Figure 5.3: PD rank vs leverage rank over time](outputs/diagnosis_ranking.png)
+![Figure 5.3: PD rank vs leverage rank over time](../outputs/diagnosis_ranking.png)
 
 #### (4) Excessive sensitivity to inputs
 
@@ -210,7 +211,7 @@ In contrast, sensitivities to equity value ($\text{median } |\text{sens}| = 2.92
 
 **Interpretation.** Small changes or estimation noise in $\sigma_E$ can induce large swings in PD, directly explaining the observed instability and ranking inconsistencies.
 
-![Figure 5.4: Sensitivity bar chart](outputs/diagnosis_sensitivity.png)
+![Figure 5.4: Sensitivity bar chart](../outputs/diagnosis_sensitivity.png)
 
 
 ### 5.2 Illustrative Examples
@@ -227,7 +228,7 @@ In the Merton calibration, $$\sigma_E \approx \Phi(d_1) \sigma_V \frac{V}{E}.$$ 
 
 When $\sigma_V$ is large, PD becomes highly sensitive to day-to-day noise in $\sigma_E$. With strong volatility sensitivity (median $|\text{sens}(\sigma_E)| = 9.211$), small fluctuations in estimated equity volatility translate into large PD swings, breaking the link between PD rank and leverage-based distress.
 
-![Figure 5.5: Asset volatility time-series](outputs/naive_sigma_V.png)
+![Figure 5.5: Asset volatility time-series](../outputs/naive_sigma_V.png)
 
 **Plot:** PD rank vs leverage rank (Figure 5.3)
 
@@ -261,7 +262,7 @@ The improved model addresses the primary weakness identified in the baseline mod
 | TSLA | 9.94 | 1.757 |
 | XOM | 31.55 | 1.077 |
 
-![Figure 6.1: Improved log(PD) time-series](outputs/diagnosis_timeseries_improved.png)
+![Figure 6.1: Improved log(PD) time-series](../outputs/diagnosis_timeseries_improved.png)
 
 The improved model exhibits smoother PD trajectories with fewer abrupt jumps compared to the baseline.
 
@@ -271,7 +272,7 @@ The improved model exhibits smoother PD trajectories with fewer abrupt jumps com
 
 **Evidence**: V/E ratios remain within economically reasonable ranges, similar to the baseline model.
 
-![Figure 6.2: Improved V/E histograms](outputs/diagnosis_v_e_ratio_improved.png)
+![Figure 6.2: Improved V/E histograms](../outputs/diagnosis_v_e_ratio_improved.png)
 
 #### (3) Risk Ranking Consistency
 
@@ -283,7 +284,7 @@ The improved model exhibits smoother PD trajectories with fewer abrupt jumps com
 
 Both models show strong top-k containment, with the improved model showing better alignment between PD ranks and leverage-based distress ranks.
 
-![Figure 6.3: Improved PD rank vs leverage rank](outputs/diagnosis_ranking_improved.png)
+![Figure 6.3: Improved PD rank vs leverage rank](../outputs/diagnosis_ranking_improved.png)
 
 #### (4) Sensitivity to Inputs
 
@@ -299,7 +300,7 @@ Both models show strong top-k containment, with the improved model showing bette
 | $r$ | 2.777 | 31.993 | 2.747 | 18.527 |
 | $T$ | 6.843 | 45.529 | 6.002 | 29.182 |
 
-![Figure 6.4: Improved sensitivity bar chart](outputs/diagnosis_sensitivity_improved.png)
+![Figure 6.4: Improved sensitivity bar chart](../outputs/diagnosis_sensitivity_improved.png)
 
 The improved model shows reduced sensitivity to equity volatility, with more balanced sensitivity across all parameters.
 
