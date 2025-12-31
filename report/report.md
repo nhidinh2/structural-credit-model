@@ -58,9 +58,11 @@ In the baseline implementation, $(V, \sigma_V)$ are obtained via unconstrained n
 
 The improved model applies EWMA (Exponential Weighted Moving Average) smoothing to $\sigma_E$:
    - **EWMA Smoothing**: Apply exponential weighted moving average to the variance, then take the square root:
-     $$\text{var}_t^{\text{smooth}} = \lambda \cdot \text{var}_{t-1}^{\text{smooth}} + (1-\lambda) \cdot \sigma_{E,t}^2$$
-     $$\sigma_{E,t}^{\text{smooth}} = \sqrt{\text{var}_t^{\text{smooth}}}$$
-     where $\lambda = 0.94$ is the smoothing parameter.
+   $$\text{var}_t^{\text{smooth}} = \lambda \cdot \text{var}_{t-1}^{\text{smooth}} + (1-\lambda) \cdot \sigma_{E,t}^2$$
+
+   $$\sigma_{E,t}^{\text{smooth}} = \sqrt{\text{var}_t^{\text{smooth}}}$$
+
+   where $\lambda = 0.94$ is the smoothing parameter.
 
 **Justification**: The improved model differs from the baseline model **only** in the application of volatility smoothing. Both models use the same calibration methodology (`fsolve` root-finding) and initialization strategy (warm-start using previous period's solution). The volatility smoothing directly addresses the identified weakness by reducing measurement noise in inputs, mitigating—but not eliminating—structural sensitivity that drives PD instability.
 
