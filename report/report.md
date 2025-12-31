@@ -320,7 +320,9 @@ By smoothing $\sigma_E$, we reduce measurement noise in the key input driving in
 
 ### 7.1 What the Model Still Does Not Capture
 
-The model cannot capture early default or liquidity/refinancing-driven distress because equity is modeled as a European option and default is only assessed at maturity $T$. Debt is represented by a single proxy $D$ (total book debt from annual Yahoo Finance balance sheets, forward-filled daily), which ignores maturity structure, covenants, seniority, and near-term funding pressure. Corporate actions (dividends, buybacks, issuance) are not modeled, though they affect equity and inferred asset values.
+The model cannot capture early default or liquidity/refinancing-driven distress because equity is modeled as a European option and default is only assessed at maturity $T$. A standard remedy is a first-passage (barrier) formulation in which default is triggered when firm value $V_t$ first falls below a boundary tied to debt, e.g., $B_t = \alpha D e^{-r(T-t)}$, allowing default prior to maturity. While not implemented here, such a framework would better capture short-horizon credit risk driven by rollover or liquidity constraints.
+
+Debt is represented by a single proxy $D$ (total book debt from annual Yahoo Finance balance sheets, forward-filled daily), which ignores maturity structure, covenants, seniority, and near-term funding pressure. Corporate actions (dividends, buybacks, issuance) are not modeled, though they affect equity and inferred asset values.
 
 ### 7.2 What Assumptions Remain
 
